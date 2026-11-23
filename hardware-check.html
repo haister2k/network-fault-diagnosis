@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Graphics Verification | Network Fault Diagnosis</title>
+<style>
+:root {color-scheme:light;font-family:Arial,Helvetica,sans-serif;color:#172b42;background:#f2f5f8}
+*{box-sizing:border-box}
+body{margin:0}
+main{max-width:850px;margin:30px auto;padding:0 18px 40px}
+header,.card{background:#fff;border:1px solid #d0d9e4;border-radius:11px;padding:22px;margin-bottom:16px}
+h1{font-size:1.75rem;color:#173d68;margin:.3rem 0 .7rem}h2{font-size:1.18rem;color:#173d68;margin:0 0 .8rem}
+p{line-height:1.55}a{color:#165e9c}
+.status{border-left:5px solid #74859b;padding:12px 15px;background:#edf2f7;margin:14px 0;font-weight:bold}
+.status.ok{border-left-color:#287851}.status.warn{border-left-color:#b57212}.status.bad{border-left-color:#b63b3b}
+button{padding:11px 18px;border-radius:7px;border:1px solid #244e7b;color:#fff;background:#1c568e;font-size:1rem;cursor:pointer}
+button:hover,button:focus-visible{background:#123d69;outline-offset:3px}
+dl{display:grid;grid-template-columns:minmax(160px,240px) 1fr;gap:12px;margin:18px 0}
+dt{font-weight:bold}dd{margin:0;overflow-wrap:anywhere}
+canvas{display:block;width:min(100%,420px);height:125px;border:1px solid #95a8c0;border-radius:6px;background:#f4f5f7}
+.small{font-size:.9rem;color:#465a6f}.mono{font-family:ui-monospace,Consolas,monospace}
+@media(max-width:560px){dl{grid-template-columns:1fr;gap:4px}dd{margin-bottom:12px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<p><a href="./index.html">Return to Network Fault Diagnosis</a></p>
+<h1>Graphics and Hardware Acceleration Check</h1>
+<p>This page checks whether the browser can create a WebGL graphics context and render an image. When available, it displays the graphics renderer. A successful WebGL test alone does not prove that the browser is using the GPU, because software rendering is possible.</p>
+<button type="button" id="run">Run graphics check</button>
+<div id="status" role="status" aria-live="polite" class="status">No test run yet.</div>
+</header>
+<section class="card" aria-labelledby="report-heading">
+<h2 id="report-heading">Browser graphics report</h2>
+<dl>
+<dt>WebGL version</dt><dd id="version">Not tested</dd>
+<dt>Vendor (reported)</dt><dd id="vendor">Not tested</dd>
+<dt>Renderer (reported)</dt><dd id="renderer">Not tested</dd>
+<dt>Graphics acceleration assessment</dt><dd id="acceleration">Not tested</dd>
+<dt>Render test</dt><dd id="draw">Not tested</dd>
+</dl>
+<canvas id="preview" width="420" height="125" aria-label="WebGL test image, expected to show a solid blue background if rendering succeeds"></canvas>
+<p class="small">The graphics details may be hidden or generalized by browser privacy settings. No graphics information is transmitted from this page.</p>
+</section>
+<section class="card">
+<h2>Confirm acceleration in Firefox</h2>
+<p>Open a new tab and enter <strong class="mono">about:support</strong>. Under <strong>Graphics</strong>, examine the compositor and WebGL driver details. To review the browser setting, open <strong>Settings → General → Performance</strong>. Firefox ordinarily chooses recommended performance settings automatically. If you disable that option, you can inspect the setting named <strong>Use hardware acceleration when available</strong>.</p>
+<p>Changing the Firefox setting may require restarting the browser. This page does not alter browser or graphics settings.</p>
+</section>
+</main>
+<script>
+(function () {
+  'use strict';
+  const el = id => document.getElementById(id);
+  const set = (id, value) => { el(id).textContent = value; };
+  let context = null;
+
+  function run() {
+    const canvas = el('preview');
+    const status = el('status');
+    status.className = 'status';
+    ['version','vendor','renderer','acceleration','draw'].forEach(id => set(id, 'Checking...'));
+    try {
+      const options = {antialias:true, preserveDrawingBuffer:true, powerPreference:'high-performance'};
+      let gl = context || canvas.getContext('webgl2', options);
+      let version = gl && typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext ? 'WebGL 2' : 'WebGL 1';
+      if (!gl) { gl = canvas.getContext('webgl', options); version = 'WebGL 1'; }
+      if (!gl) { gl = canvas.getContext('experimental-webgl', options); version = 'Experimental WebGL 1'; }
+      if (!gl) {
+        set('version', 'Unavailable');
+        set('vendor', 'Unavailable');
+        set('renderer', 'Unavailable');
+        set('acceleration', 'Cannot determine. WebGL is unavailable.');
+        set('draw', 'Not run');
+        status.className = 'status bad';
+        status.textContent = 'WebGL is unavailable in this browser session.';
+        return;
+      }
+      context = gl;
+      set('version', version);
+      const ext = gl.getExtension('WEBGL_debug_renderer_info');
+      const rawVendor = ext ? gl.getParameter(ext.UNMASKED_VENDOR_WEBGL) : null;
+      const rawRenderer = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : null;
+      const vendor = rawVendor || gl.getParameter(gl.VENDOR) || 'Not disclosed';
+      const renderer = rawRenderer || gl.getParameter(gl.RENDERER) || 'Not disclosed';
+      set('vendor', vendor);
+      set('renderer', renderer);
+
+      gl.viewport(0,0,canvas.width,canvas.height);
+      gl.clearColor(0.13,0.33,0.56,1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      const pixel = new Uint8Array(4);
+      gl.readPixels(5,5,1,1,gl.RGBA,gl.UNSIGNED_BYTE,pixel);
+      const drawingWorks = gl.getError() === gl.NO_ERROR && pixel[2] > pixel[0] && pixel[3] === 255;
+      set('draw', drawingWorks ? 'Passed. WebGL rendered the blue test image.' : 'Could not confirm. Check the colored test image.');
+
+      const info = `${vendor} ${renderer}`;
+      const software = /swiftshader|llvmpipe|softpipe|software rasterizer|software renderer|microsoft basic render|\bwarp\b|swrast|mesa offscreen/i.test(info);
+      const namedHardware = /nvidia|geforce|quadro|radeon|\brx\s?\d|\brtx\s?\d|\bgtx\s?\d|intel\(r\)|intel.*(graphics|uhd|iris|arc)|apple gpu|apple m[1-9]/i.test(info);
+      let assessment;
+      if (software) assessment = 'Software renderer detected. GPU acceleration is unlikely for this WebGL context.';
+      else if (rawRenderer && namedHardware) assessment = 'A GPU renderer is reported. Hardware acceleration is likely for this WebGL context.';
+      else assessment = 'Not confirmed by the page. Check Firefox about:support → Graphics.';
+      set('acceleration', assessment);
+      status.className = 'status ' + (drawingWorks ? (software ? 'warn' : 'ok') : 'warn');
+      status.textContent = drawingWorks
+        ? (software ? 'WebGL works, but software rendering is reported.' : 'WebGL rendering test passed.')
+        : 'WebGL is available, but the render test needs review.';
+    } catch(err) {
+      status.className = 'status bad';
+      status.textContent = 'Graphics check could not finish.';
+      set('acceleration', 'Not confirmed');
+      set('draw', err && err.message ? err.message : 'Unknown error');
+    }
+  }
+  el('run').addEventListener('click', run);
+  run();
+})();
+</script>
+</body>
+</html>
