@@ -1,0 +1,325 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Network Connectivity: Interactive Fault Diagnosis</title>
+<script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
+
+<style>
+  body {
+    margin: 0;
+    background: #f2f5f9;
+    color: #202d3b;
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+  }
+  main {
+    max-width: 1000px;
+    margin: auto;
+    padding: 24px;
+  }
+  h1, h2 { color: #193a5e; }
+  .panel {
+    background: white;
+    padding: 20px;
+    margin: 20px 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+  }
+  a-scene {
+    width: 100%;
+    height: 370px;
+    border-radius: 8px;
+  }
+  button {
+    padding: 10px 15px;
+    margin: 5px;
+    border: 1px solid #64748b;
+    border-radius: 6px;
+    background: #e8eff8;
+    color: #142c48;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  button:hover, button:focus-visible {
+    background: #d3e5fa;
+    outline-offset: 3px;
+  }
+  label {
+    display: block;
+    padding: 8px;
+    cursor: pointer;
+  }
+  .output {
+    background: #edf3f9;
+    padding: 14px;
+    border-left: 4px solid #3976ad;
+    margin-top: 15px;
+    white-space: pre-line;
+  }
+  .success { border-left-color: #23865b; }
+  .failure { border-left-color: #b45309; }
+  fieldset { border: 1px solid #cbd5e1; }
+  .note { color: #435469; }
+</style>
+</head>
+
+<body>
+<main>
+<h1>Network Connectivity: Interactive Fault Diagnosis</h1>
+<p>Interactive network administration training</p>
+
+<section class="panel">
+<h2>Scenario</h2>
+<p>
+An organization is migrating application servers to a new subnet.
+A load balancer distributes requests between the original and
+migrated application servers. Users report intermittent failures
+when the application accesses its database.
+</p>
+<p>
+The application servers are running and the database service is
+available. Examine the network configuration to determine why
+some database connections fail.
+</p>
+<p><strong>Learning objective:</strong> Identify the network
+configuration fault, select an appropriately restricted correction,
+and verify that authorized communication succeeds while access
+from unrelated networks remains blocked.</p>
+</section>
+
+<section class="panel">
+<h2>1. Inspect the Network</h2>
+<p>
+Select a device in the 3D view or use the buttons below it
+to examine its configuration and diagnostic information.
+</p>
+
+<a-scene embedded
+  background="color: #e5edf7"
+  cursor="rayOrigin: mouse"
+  raycaster="objects: .device">
+
+  <a-sky color="#e5edf7"></a-sky>
+  <a-plane position="0 0 -6" rotation="-90 0 0"
+    width="12" height="8" color="#ccd9e7"></a-plane>
+
+  <!-- Network connections -->
+  <a-entity line="start: -3 1.3 -6; end: -1 2 -6;
+    color: #64748b"></a-entity>
+  <a-entity line="start: -3 1.3 -6; end: -1 0.7 -6;
+    color: #64748b"></a-entity>
+  <a-entity line="start: -1 2 -6; end: 1 1.3 -6;
+    color: #64748b"></a-entity>
+  <a-entity line="start: -1 0.7 -6; end: 1 1.3 -6;
+    color: #64748b"></a-entity>
+  <a-entity line="start: 1 1.3 -6; end: 3 1.3 -6;
+    color: #64748b"></a-entity>
+
+  <!-- Load balancer -->
+  <a-box class="device" data-device="balancer"
+    position="-3 1.3 -6" width="1.2" height=".7"
+    depth=".6" color="#2563eb"></a-box>
+  <a-text value="Load Balancer" position="-3 2 -6"
+    align="center" color="#142c48" width="4"></a-text>
+
+  <!-- Original application server -->
+  <a-box class="device" data-device="original"
+    position="-1 2 -6" width="1.2" height=".65"
+    depth=".6" color="#16866d"></a-box>
+  <a-text value="Original App" position="-1 2.65 -6"
+    align="center" color="#142c48" width="4"></a-text>
+
+  <!-- Migrated application server -->
+  <a-box class="device" data-device="migrated"
+    position="-1 .7 -6" width="1.2" height=".65"
+    depth=".6" color="#b87913"></a-box>
+  <a-text value="Migrated App" position="-1 1.1 -6"
+    align="center" color="#142c48" width="4"></a-text>
+
+  <!-- Firewall -->
+  <a-box class="device" data-device="firewall"
+    position="1 1.3 -6" width="1.2" height=".9"
+    depth=".6" color="#b83c48"></a-box>
+  <a-text value="Firewall" position="1 2 -6"
+    align="center" color="#142c48" width="4"></a-text>
+
+  <!-- Database -->
+  <a-cylinder class="device" data-device="database"
+    position="3 1.3 -6" radius=".55" height=".8"
+    color="#7453b5"></a-cylinder>
+  <a-text value="Database" position="3 2 -6"
+    align="center" color="#142c48" width="4"></a-text>
+
+  <a-entity camera position="0 1.6 0"
+    look-controls></a-entity>
+</a-scene>
+
+<div>
+  <button data-select="balancer">Load Balancer</button>
+  <button data-select="original">Original Server</button>
+  <button data-select="migrated">Migrated Server</button>
+  <button data-select="firewall">Firewall</button>
+  <button data-select="database">Database</button>
+</div>
+
+<div class="output" id="device-info"
+     role="status" aria-live="polite">
+Select a device to display diagnostic information.
+</div>
+</section>
+
+<section class="panel">
+<h2>2. Select a Corrective Action</h2>
+<p>
+Review the evidence before choosing how to modify the
+firewall policy.
+</p>
+
+<fieldset>
+<legend>Proposed firewall correction</legend>
+
+<label>
+<input type="radio" name="rule" value="none" checked>
+Keep the existing firewall policy.
+</label>
+
+<label>
+<input type="radio" name="rule" value="targeted">
+Allow 10.20.20.0/24 to reach database 10.20.30.15
+on TCP port 5432.
+</label>
+
+<label>
+<input type="radio" name="rule" value="broad">
+Allow 10.20.0.0/16 to reach database 10.20.30.15
+on TCP port 5432.
+</label>
+</fieldset>
+
+<button id="verify">Run Verification Checks</button>
+<button id="reset">Reset Activity</button>
+
+<div class="output" id="results"
+     role="status" aria-live="polite">
+Choose a correction and run the verification checks.
+</div>
+</section>
+
+<section class="panel">
+<h2>3. Review the Results</h2>
+<p>
+A successful correction must restore database access
+for the migrated application servers while preventing
+unrelated networks from reaching the database.
+</p>
+<p class="note">
+This exercise uses predefined network conditions to
+evaluate troubleshooting decisions. It does not make
+changes to real network equipment.
+</p>
+</section>
+</main>
+
+<script>
+const devices = {
+  balancer:
+    "LOAD BALANCER\n" +
+    "Status: Healthy\n" +
+    "Backend distribution: 50% original, 50% migrated\n" +
+    "Both application pools are enabled.",
+
+  original:
+    "ORIGINAL APPLICATION SERVER\n" +
+    "Address: 10.20.10.21/24\n" +
+    "Gateway: 10.20.10.1\n" +
+    "Database: 10.20.30.15:5432\n" +
+    "Connection test: SUCCESS",
+
+  migrated:
+    "MIGRATED APPLICATION SERVER\n" +
+    "Address: 10.20.20.21/24\n" +
+    "Gateway: 10.20.20.1\n" +
+    "Database: 10.20.30.15:5432\n" +
+    "Connection test: TIMEOUT",
+
+  firewall:
+    "FIREWALL CONFIGURATION\n" +
+    "Existing rule: ALLOW 10.20.10.0/24\n" +
+    "Destination: 10.20.30.15 TCP 5432\n" +
+    "Default policy: DENY\n" +
+    "Log: Traffic from 10.20.20.21 DENIED",
+
+  database:
+    "DATABASE SERVER\n" +
+    "Address: 10.20.30.15\n" +
+    "Service: TCP 5432 LISTENING\n" +
+    "Connections from original subnet: SUCCESS\n" +
+    "Connections from migrated subnet: TIMEOUT"
+};
+
+function showDevice(device) {
+  document.getElementById("device-info").textContent =
+    devices[device];
+}
+
+document.querySelectorAll("[data-device]").forEach(function(el) {
+  el.addEventListener("click", function() {
+    showDevice(el.dataset.device);
+  });
+});
+
+document.querySelectorAll("[data-select]").forEach(function(el) {
+  el.addEventListener("click", function() {
+    showDevice(el.dataset.select);
+  });
+});
+
+document.getElementById("verify").addEventListener("click",
+function() {
+  const choice =
+    document.querySelector('input[name="rule"]:checked').value;
+
+  const oldSubnet = true;
+  const newSubnet = choice !== "none";
+  const restrictedSubnet = choice === "broad";
+
+  const passed = oldSubnet && newSubnet && !restrictedSubnet;
+
+  const output =
+    "Original application subnet: " +
+    (oldSubnet ? "PASS" : "FAIL") + "\n" +
+    "Migrated application subnet: " +
+    (newSubnet ? "PASS" : "FAIL") + "\n" +
+    "Unrelated subnet remains blocked: " +
+    (!restrictedSubnet ? "PASS" : "FAIL") + "\n\n";
+
+  const explanation = passed
+    ? "SUCCESS: Authorized connectivity is restored " +
+      "and restricted access is preserved."
+    : choice === "broad"
+    ? "SECURITY CHECK FAILED: The rule permits " +
+      "an unrelated subnet to access the database."
+    : "CONNECTIVITY CHECK FAILED: The migrated " +
+      "application subnet still cannot reach the database.";
+
+  const results = document.getElementById("results");
+  results.textContent = output + explanation;
+  results.className = "output " +
+    (passed ? "success" : "failure");
+});
+
+document.getElementById("reset").addEventListener("click",
+function() {
+  document.querySelector('input[value="none"]').checked = true;
+  document.getElementById("device-info").textContent =
+    "Select a device to display diagnostic information.";
+  document.getElementById("results").textContent =
+    "Choose a correction and run the verification checks.";
+  document.getElementById("results").className = "output";
+});
+</script>
+</body>
+</html>
