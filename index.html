@@ -25,6 +25,12 @@ button:hover,button:focus-visible {background:#153f68; outline:2px solid #2e74b1
 canvas {display:block; margin-top:14px; width:min(100%,300px); height:120px; border:1px solid #b9c8d7; border-radius:4px}
 .small {font-size:.92rem; color:#52657b}
 #retry {display:none}
+details.browser-help {border:1px solid #cbd6e1; border-radius:7px; margin:10px 0; padding:12px 15px; background:#f8fafc}
+details.browser-help summary {font-weight:bold; color:#193d65; cursor:pointer}
+details.browser-help[open] summary {margin-bottom:9px}
+details.browser-help ol {margin:8px 0 8px 21px; padding:0; line-height:1.55}
+details.browser-help li {margin-bottom:6px}
+code {background:#e9f0f8; color:#243b56; padding:2px 5px; border-radius:4px; overflow-wrap:anywhere}
 @media(max-width:550px){header,section{padding:18px}dl{grid-template-columns:1fr;gap:4px}dd{margin-bottom:10px}}
 </style>
 </head>
@@ -48,9 +54,43 @@ canvas {display:block; margin-top:14px; width:min(100%,300px); height:120px; bor
   <p class="small">Browsers may conceal graphics device information. WebGL rendering can succeed without confirming hardware acceleration. The test blocks a renderer explicitly identified as software.</p>
 </section>
 <section aria-labelledby="help-title">
-  <h2 id="help-title">If the test fails</h2>
-  <p>In Firefox, enter <strong>about:support</strong> in a new tab and check the Graphics section. You can review acceleration settings under <strong>Settings → General → Performance</strong>. A browser restart may be necessary after changing settings. Then return here and select <strong>Run check again</strong>.</p>
-  <p class="small">No system settings are changed by this page. No graphics information is sent to a server.</p>
+  <h2 id="help-title">If the graphics check fails</h2>
+  <p>Choose your browser for steps to review graphics acceleration. After changing a browser setting, restart that browser, return to this page, and select <strong>Run check again</strong>.</p>
+
+  <details class="browser-help" id="edge-help">
+    <summary>Microsoft Edge</summary>
+    <ol>
+      <li>Open a new tab and enter <code>edge://settings/system</code> in the address bar.</li>
+      <li>Turn on <strong>Use graphics acceleration when available</strong>.</li>
+      <li>Select <strong>Restart</strong> if prompted, or close and reopen Edge.</li>
+      <li>For a detailed status check, enter <code>edge://gpu</code> and review <strong>Graphics Feature Status</strong>, especially WebGL.</li>
+      <li>Return to this page and select <strong>Run check again</strong>.</li>
+    </ol>
+  </details>
+
+  <details class="browser-help" id="chrome-help">
+    <summary>Google Chrome</summary>
+    <ol>
+      <li>Open a new tab and enter <code>chrome://settings/system</code> in the address bar.</li>
+      <li>Turn on <strong>Use graphics acceleration when available</strong>.</li>
+      <li>Select <strong>Relaunch</strong> if prompted, or close and reopen Chrome.</li>
+      <li>For a detailed status check, enter <code>chrome://gpu</code> and review <strong>Graphics Feature Status</strong>, especially WebGL.</li>
+      <li>Return to this page and select <strong>Run check again</strong>.</li>
+    </ol>
+  </details>
+
+  <details class="browser-help" id="firefox-help">
+    <summary>Mozilla Firefox</summary>
+    <ol>
+      <li>Open Firefox <strong>Settings</strong>. Under <strong>General</strong> or <strong>Tabs and browsing</strong>, locate <strong>Performance</strong>.</li>
+      <li>If the acceleration setting is hidden, clear <strong>Use recommended performance settings</strong>.</li>
+      <li>Check <strong>Use hardware acceleration when available</strong>, if the option appears.</li>
+      <li>Close and reopen Firefox. For details, enter <code>about:support</code> and inspect the <strong>Graphics</strong> section.</li>
+      <li>Return to this page and select <strong>Run check again</strong>.</li>
+    </ol>
+  </details>
+
+  <p class="small">If WebGL still fails, the browser, graphics driver, or device policy may be limiting graphics acceleration. Do not change advanced browser flags to bypass compatibility restrictions. This page does not alter browser settings or send graphics information to a server.</p>
 </section>
 </main>
 <script>
