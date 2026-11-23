@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Graphics Verification | Network Connectivity: Interactive Fault Diagnosis</title>
+<style>
+:root {color-scheme:light; font-family:Arial,Helvetica,sans-serif; color:#1d3148; background:#f2f5f9}
+* {box-sizing:border-box}
+body {margin:0}
+main {max-width:790px; margin:45px auto; padding:0 18px}
+header, section {background:white; border:1px solid #cbd6e1; border-radius:10px; padding:22px 26px; margin:0 0 16px}
+h1 {font-size:1.7rem; color:#193d65; margin:0 0 8px}
+h2 {font-size:1.1rem; color:#193d65; margin:0 0 10px}
+p {line-height:1.55}
+.status {padding:14px 16px; border-left:5px solid #73869b; background:#eef3f8; margin:16px 0; font-weight:bold}
+.status.ok {border-left-color:#277b54}
+.status.bad {border-left-color:#a94438}
+.status.warning {border-left-color:#c18822}
+dl {display:grid; grid-template-columns:minmax(155px,220px) 1fr; gap:10px; margin:0}
+dt {font-weight:bold}
+dd {margin:0; overflow-wrap:anywhere}
+button {padding:10px 16px; border-radius:6px; background:#1b5488; color:#fff; border:0; font-size:1rem; cursor:pointer}
+button:hover,button:focus-visible {background:#153f68; outline:2px solid #2e74b1; outline-offset:2px}
+canvas {display:block; margin-top:14px; width:min(100%,300px); height:120px; border:1px solid #b9c8d7; border-radius:4px}
+.small {font-size:.92rem; color:#52657b}
+#retry {display:none}
+@media(max-width:550px){header,section{padding:18px}dl{grid-template-columns:1fr;gap:4px}dd{margin-bottom:10px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Graphics Compatibility Check</h1>
+  <p>Before the network troubleshooting activity opens, this page tests whether the browser can render a 3D WebGL image. A working WebGL renderer is required for the network view.</p>
+  <div id="status" class="status" role="status" aria-live="polite">Checking browser graphics...</div>
+  <button id="retry" type="button">Run check again</button>
+</header>
+<section aria-labelledby="results-title">
+  <h2 id="results-title">Verification results</h2>
+  <dl>
+    <dt>WebGL</dt><dd id="version">Checking...</dd>
+    <dt>Renderer</dt><dd id="renderer">Checking...</dd>
+    <dt>Acceleration</dt><dd id="acceleration">Checking...</dd>
+    <dt>Graphics test</dt><dd id="draw">Checking...</dd>
+  </dl>
+  <canvas id="preview" width="300" height="120" aria-label="A blue triangle on a pale background when the graphics test succeeds"></canvas>
+  <p class="small">Browsers may conceal graphics device information. WebGL rendering can succeed without confirming hardware acceleration. The test blocks a renderer explicitly identified as software.</p>
+</section>
+<section aria-labelledby="help-title">
+  <h2 id="help-title">If the test fails</h2>
+  <p>In Firefox, enter <strong>about:support</strong> in a new tab and check the Graphics section. You can review acceleration settings under <strong>Settings → General → Performance</strong>. A browser restart may be necessary after changing settings. Then return here and select <strong>Run check again</strong>.</p>
+  <p class="small">No system settings are changed by this page. No graphics information is sent to a server.</p>
+</section>
+</main>
+<script>
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const status = $('status');
+  const retry = $('retry');
+  const canvas = $('preview');
+  let redirectTimer = null;
+
+  function setStatus(kind, message) {
+    status.className = 'status ' + kind;
+    status.textContent = message;
+  }
+  function setText(id, content) { $(id).textContent = content; }
+  function fail(message) {
+    setStatus('bad', message + ' The learning object has not been opened.');
+    retry.style.display = 'inline-block';
+  }
+  function shader(gl, type, source) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, source);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      const detail = gl.getShaderInfoLog(s) || 'Shader compilation failed';
+      gl.deleteShader(s);
+      throw new Error(detail);
+    }
+    return s;
+  }
+  function renderTriangle(gl, webgl2) {
+    const vert = webgl2
+      ? '#version 300 es\nin vec2 aPosition;\nvoid main(){gl_Position=vec4(aPosition,0.0,1.0);}'
+      : 'attribute vec2 aPosition;\nvoid main(){gl_Position=vec4(aPosition,0.0,1.0);}';
+    const frag = webgl2
+      ? '#version 300 es\nprecision mediump float;\nout vec4 outputColor;\nvoid main(){outputColor=vec4(0.14,0.38,0.70,1.0);}'
+      : 'precision mediump float;\nvoid main(){gl_FragColor=vec4(0.14,0.38,0.70,1.0);}';
+    const vs = shader(gl, gl.VERTEX_SHADER, vert);
+    const fs = shader(gl, gl.FRAGMENT_SHADER, frag);
+    const program = gl.createProgram();
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      throw new Error(gl.getProgramInfoLog(program) || 'Graphics program could not be linked');
+    }
+    gl.useProgram(program);
+    const vertices = new Float32Array([-0.75,-0.70, 0.75,-0.70, 0.0,0.75]);
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    const location = gl.getAttribLocation(program, 'aPosition');
+    gl.enableVertexAttribArray(location);
+    gl.vertexAttribPointer(location, 2, gl.FLOAT, false, 0, 0);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(0.94, 0.96, 0.98, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.finish();
+    const pixel = new Uint8Array(4);
+    gl.readPixels(Math.floor(canvas.width/2), Math.floor(canvas.height/2), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+    const passed = gl.getError() === gl.NO_ERROR && pixel[2] > pixel[0] && pixel[2] > 110 && pixel[3] > 240;
+    gl.deleteBuffer(buffer);
+    gl.deleteProgram(program);
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
+    return passed;
+  }
+
+  function run() {
+    if (redirectTimer) clearTimeout(redirectTimer);
+    retry.style.display = 'none';
+    setStatus('', 'Checking browser graphics...');
+    ['version','renderer','acceleration','draw'].forEach(id => setText(id, 'Checking...'));
+    try {
+      const options = {antialias:true, preserveDrawingBuffer:true, powerPreference:'high-performance'};
+      let gl = canvas.getContext('webgl2', options);
+      const webgl2 = !!gl;
+      if (!gl) gl = canvas.getContext('webgl', options);
+      if (!gl) gl = canvas.getContext('experimental-webgl', options);
+      if (!gl) {
+        setText('version', 'Unavailable');
+        setText('renderer', 'Unavailable');
+        setText('acceleration', 'Unavailable');
+        setText('draw', 'Not run');
+        fail('WebGL is unavailable.');
+        return;
+      }
+      setText('version', webgl2 ? 'WebGL 2' : 'WebGL 1');
+      const ext = gl.getExtension('WEBGL_debug_renderer_info');
+      const reported = ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || '') : '';
+      const renderer = reported || String(gl.getParameter(gl.RENDERER) || 'Not disclosed');
+      setText('renderer', renderer);
+      const software = /swiftshader|llvmpipe|softpipe|software rasterizer|software renderer|microsoft basic render|\bwarp\b|swrast|mesa offscreen/i.test(renderer);
+      const likelyGpu = !!reported && /nvidia|geforce|quadro|radeon|intel|apple|adreno|mali|powervr|amd/i.test(renderer) && !software;
+      setText('acceleration', software ? 'Software renderer detected' : likelyGpu ? 'GPU renderer reported' : 'Not independently confirmed');
+      const drawn = renderTriangle(gl, webgl2);
+      setText('draw', drawn ? 'Passed, blue triangle rendered correctly' : 'Failed, graphics output did not match');
+      if (!drawn) {fail('The WebGL rendering test failed.'); return;}
+      if (software) {fail('WebGL works, but the reported renderer uses software.'); return;}
+      setStatus('ok', likelyGpu
+        ? 'Graphics test passed. GPU renderer reported. Opening the learning object...'
+        : 'WebGL graphics test passed. Hardware acceleration could not be independently confirmed. Opening the learning object...');
+      redirectTimer = setTimeout(() => {window.location.replace('./activity.html');}, 2200);
+    } catch (error) {
+      setText('draw', 'Unable to finish test');
+      setStatus('warning', 'A graphics error occurred.');
+      fail('The graphics check could not finish.');
+      console.error('WebGL verification:', error);
+    }
+  }
+  retry.addEventListener('click', run);
+  run();
+})();
+</script>
+</body>
+</html>
